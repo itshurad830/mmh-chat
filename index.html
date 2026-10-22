@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MMH.RO — پیام‌رسان</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💬</text></svg>">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  :root {
+    --primary: #6d5dfc;
+    --primary-2: #8b7cf6;
+    --grad: linear-gradient(135deg, #6d5dfc 0%, #a855f7 100%);
+    --bg: #0f0f1a;
+    --panel: #1a1a2e;
+    --panel-2: #23233d;
+    --text: #f0f0f5;
+    --text-dim: #8b8ba7;
+    --border: rgba(255,255,255,0.08);
+    --sent: linear-gradient(135deg, #6d5dfc, #a855f7);
+  }
+  html, body { height: 100%; }
+  body {
+    font-family: 'Segoe UI', 'Vazirmatn', Tahoma, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* ---------- AUTH ---------- */
+  #authScreen {
+    position: fixed; inset: 0;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    background: radial-gradient(circle at 20% 20%, rgba(109,93,252,0.25), transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(168,85,247,0.25), transparent 50%),
+                var(--bg);
+    z-index: 100;
+    overflow-y: auto;
+  }
+  .auth-card {
+    background: rgba(26,26,46,0.9);
+    backdrop-filter: blur(20px);
+    border: 1px solid var(--border);
+    border-radius: 24px;
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 420px;
+    box-shadow: 0 30px 80px rgba(0,0,0,0.5);
+    animation: pop 0.4s ease;
+  }
+  @keyframes pop { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: none; } }
+  .brand {
+    text-align: center;
+    margin-bottom: 8px;
+    font-size: 34px;
+    font-weight: 900;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    letter-spacing: -1px;
+  }
+  .brand-sub { text-align: center; color: var(--text-dim); font-size: 13px; margin-bottom: 30px; }
+
+  .field { position: relative; margin-bottom: 14px; }
+  .field input {
+    width: 100%;
+    padding: 15px 16px;
+    background: var(--panel-2);
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    color: var(--text);
+    font-size: 15px;
+    transition: 0.25s;
+    font-family: inherit;
+  }
+  .field input::placeholder { color: var(--text-dim); }
+  .field input:focus {
+    outline: none;
+    border-color: var(--primary);
+    background: #282846;
+    box-shadow: 0 0 0 4px rgba(109,93,252,0.15);
+  }
+
+  .btn {
+    width: 100%;
+    padding: 15px;
+    border: none;
+    border-radius: 14px;
+    background: var(--grad);
+    color: white;
+    font-size: 16px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: 0.25s;
+    font-family: inherit;
+    margin-top: 8px;
+  }
+  .btn:hover { transform: translateY(-2px); box-shadow: 0 12px 28px rgba(109,93,252,0.4); }
+  .btn:active { transform: translateY(0); }
+  .btn:disabled { opacity: 0.6; cursor: not-allowed; transform: none; }
+
+  .link-toggle {
+    text-align: center;
+    margin-top: 20px;
+    color: var(--primary-2);
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+  }
+  .link-toggle:hover { text-decoration: underline; }
+
+  .err-msg {
+    color: #ff6b81;
+    text-align: center;
+    margin-top: 12px;
+    font-size: 13px;
+    min-height: 18px;
+  }
+
+  .hidden { display: none !important; }
+
+  /* ---------- CHAT ---------- */
+  #chatScreen {
+    display: none;
+    height: 100vh;
+    height: 100dvh;
+    flex-direction: column;
+  }
+  #chatScreen.active { display: flex; }
+
+  .chat-header {
+    background: var(--panel);
+    padding: 14px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 5;
+  }
+  .chat-header .brand-sm {
+    font-size: 20px;
+    font-weight: 900;
+    background: var(--grad);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .me-badge {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .me-badge .avatar {
+    width: 38px; height: 38px; border-radius: 50%;
+    background: var(--grad);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: white; font-size: 15px;
+  }
+  .me-badge .name { font-size: 14px; font-weight: 600; }
+  .icon-btn {
+    background: rgba(255,255,255,0.06);
+    border: none;
+    color: var(--text);
+    width: 38px; height: 38px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.2s;
+  }
+  .icon-btn:hover { background: rgba(255,255,255,0.12); }
+
+  .chat-layout { flex: 1; display: flex; overflow: hidden; }
+
+  /* Sidebar */
+  .sidebar {
+    width: 320px;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .sidebar-head {
+    padding: 18px 20px 12px;
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .users-list { flex: 1; overflow-y: auto; padding: 0 10px 10px; }
+  .user-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 14px;
+    cursor: pointer;
+    transition: 0.15s;
+    margin-bottom: 4px;
+  }
+  .user-item:hover { background: var(--panel-2); }
+  .user-item.active { background: rgba(109,93,252,0.2); }
+  .user-item .avatar {
+    width: 46px; height: 46px; border-radius: 50%;
+    background: linear-gradient(135deg, #6d5dfc, #a855f7);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: white; font-size: 17px;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .user-item .avatar::after {
+    content: '';
+    position: absolute;
+    bottom: 1px; left: 1px;
+    width: 11px; height: 11px;
+    background: #22c55e;
+    border: 2px solid var(--panel);
+    border-radius: 50%;
+  }
+  .user-item .info { min-width: 0; }
+  .user-item .info .uname { font-weight: 600; font-size: 15px; }
+
+  /* Messages */
+  .chat-main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg);
+    min-width: 0;
+  }
+  .chat-main-head {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--panel);
+    flex-shrink: 0;
+  }
+  .chat-main-head .avatar {
+    width: 42px; height: 42px; border-radius: 50%;
+    background: linear-gradient(135deg, #6d5dfc, #a855f7);
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 800; color: white;
+  }
+  .chat-main-head .title { font-weight: 700; font-size: 16px; }
+  .chat-main-head .status { font-size: 12px; color: #22c55e; }
+
+  .messages-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    scroll-behavior: smooth;
+  }
+  .messages-list::-webkit-scrollbar, .users-list::-webkit-scrollbar { width: 6px; }
+  .messages-list::-webkit-scrollbar-thumb, .users-list::-webkit-scrollbar-thumb {
+    background: rgba(255,255,255,0.1); border-radius: 3px;
+  }
+
+  .msg-row { display: flex; flex-direction: column; max-width: 75%; }
+  .msg-row.sent { align-self: flex-start; align-items: flex-start; }
+  .msg-row.received { align-self: flex-end; align-items: flex-end; }
+  .bubble {
+    padding: 11px 15px;
+    border-radius: 18px;
+    font-size: 14.5px;
+    line-height: 1.5;
+    word-wrap: break-word;
+    white-space: pre-wrap;
+    animation: msgIn 0.2s ease;
+  }
+  @keyframes msgIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .msg-row.sent .bubble {
+    background: var(--sent);
+    color: white;
+    border-bottom-right-radius: 6px;
+  }
+  .msg-row.received .bubble {
+    background: var(--panel-2);
+    color: var(--text);
+    border-bottom-left-radius: 6px;
+  }
+  .msg-time {
+    font-size: 10.5px;
+    color: var(--text-dim);
+    margin-top: 4px;
+    padding: 0 6px;
+  }
+
+  .empty-chat {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: var(--text-dim);
+    text-align: center;
+    padding: 30px;
+    gap: 12px;
+  }
+  .empty-chat .emoji { font-size: 54px; opacity: 0.7; }
+  .empty-chat .txt { font-size: 15px; }
+
+  .input-bar {
+    padding: 14px 16px;
+    background: var(--panel);
+    border-top: 1px solid var(--border);
+    display: flex;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+  .input-bar input {
+    flex: 1;
+    padding: 14px 18px;
+    background: var(--panel-2);
+    border: 1.5px solid transparent;
+    border-radius: 24px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    transition: 0.2s;
+  }
+  .input-bar input:focus { outline: none; border-color: var(--primary); }
+  .input-bar input::placeholder { color: var(--text-dim); }
+  .send-btn {
+    width: 50px; height: 50px;
+    border-radius: 50%;
+    border: none;
+    background: var(--grad);
+    color: white;
+    font-size: 20px;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    transition: 0.2s;
+    flex-shrink: 0;
+  }
+  .send-btn:hover { transform: scale(1.06); box-shadow: 0 8px 20px rgba(109,93,252,0.4); }
+
+  /* mobile */
+  .mobile-back {
+    display: none;
+    background: none; border: none; color: var(--primary-2);
+    font-size: 22px; cursor: pointer; padding: 0 6px 0 0;
+  }
+  @media (max-width: 720px) {
+    .sidebar { width: 100%; border-left: none; }
+    .chat-main { display: none; }
+    .chat-layout.show-chat .sidebar { display: none; }
+    .chat-layout.show-chat .chat-main { display: flex; }
+    .mobile-back { display: block; }
+    .msg-row { max-width: 85%; }
+  }
+
+  /* toast */
+  .toast {
+    position: fixed;
+    top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-100px);
+    background: #ff6b81;
+    color: white;
+    padding: 12px 22px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 600;
+    z-index: 999;
+    transition: 0.3s;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .loading {
+    display: inline-block; width: 16px; height: 16px;
+    border: 2px solid rgba(255,255,255,0.4);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    vertical-align: middle;
+    margin-left: 8px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<!-- ========== AUTH ========== -->
+<div id="authScreen">
+  <div class="auth-card">
+    <div class="brand">MMH.RO</div>
+    <div class="brand-sub">پیام‌رسان سریع و امن</div>
+
+    <!-- Login -->
+    <div id="loginForm">
+      <div class="field"><input id="loginName" placeholder="اسم کاربری" autocomplete="username"></div>
+      <div class="field"><input id="loginPass" type="password" placeholder="پسورد" autocomplete="current-password"></div>
+      <button class="btn" id="loginBtn" onclick="doLogin()">ورود</button>
+      <div class="err-msg" id="loginErr"></div>
+      <div class="link-toggle" onclick="switchForm('register')">حساب نداری؟ ثبت‌نام کن</div>
+    </div>
+
+    <!-- Register -->
+    <div id="registerForm" class="hidden">
+      <div class="field"><input id="regName" placeholder="اسم کاربری" autocomplete="username"></div>
+      <div class="field"><input id="regPass" type="password" placeholder="پسورد" autocomplete="new-password"></div>
+      <div class="field"><input id="regPass2" type="password" placeholder="تکرار پسورد" autocomplete="new-password"></div>
+      <button class="btn" id="regBtn" onclick="doRegister()">ثبت‌نام</button>
+      <div class="err-msg" id="regErr"></div>
+      <div class="link-toggle" onclick="switchForm('login')">حساب داری؟ وارد شو</div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== CHAT ========== -->
+<div id="chatScreen">
+  <div class="chat-header">
+    <div class="brand-sm">MMH.RO</div>
+    <div class="me-badge">
+      <div class="name" id="myName">—</div>
+      <div class="avatar" id="myAvatar">?</div>
+      <button class="icon-btn" onclick="doLogout()" title="خروج">⏻</button>
+    </div>
+  </div>
+
+  <div class="chat-layout" id="chatLayout">
+    <!-- sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-head">👥 کاربران آنلاین</div>
+      <div class="users-list" id="usersList">
+        <div class="empty-chat" style="padding:40px 20px;"><div class="txt">در حال بارگذاری...</div></div>
+      </div>
+    </div>
+
+    <!-- main -->
+    <div class="chat-main" id="chatMain">
+      <div class="empty-chat">
+        <div class="emoji">💬</div>
+        <div class="txt">یک کاربر رو انتخاب کن تا چت شروع بشه</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<!-- ========== FIREBASE ========== -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getFirestore, collection, doc, setDoc, getDoc, getDocs,
+  addDoc, query, orderBy, onSnapshot, serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// کانفیگ اختصاصی شما
+const firebaseConfig = {
+  apiKey: "AIzaSyClxPFHy_UeOtZY9_IQRyiRnUBZnSnprQ",
+  authDomain: "mmh-ro.firebaseapp.com",
+  projectId: "mmh-ro",
+  storageBucket: "mmh-ro.firebasestorage.app",
+  messagingSenderId: "37389286441",
+  appId: "1:37389286441:web:7dafe1dd432ff1225d3fe0",
+  measurementId: "G-8555QBB7QF"
+};
+
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+/* ---------- helpers ---------- */
+function hashPass(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) {
+    h = ((h << 5) - h) + str.charCodeAt(i);
+    h |= 0;
+  }
+  return "h_" + Math.abs(h).toString(36);
+}
+function toast(msg, ok = false) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = ok ? '#22c55e' : '#ff6b81';
+  t.classList.add('show');
+  clearTimeout(t._t);
+  t._t = setTimeout(() => t.classList.remove('show'), 2500);
+}
+function setBusy(btnId, busy) {
+  const b = document.getElementById(btnId);
+  if (!b) return;
+  if (busy) { b.dataset.old = b.innerHTML; b.innerHTML = '<span class="loading"></span>'; b.disabled = true; }
+  else { b.innerHTML = b.dataset.old || b.innerHTML; b.disabled = false; }
+}
+function timeAgo(ts) {
+  if (!ts) return '';
+  const d = ts.toDate ? ts.toDate() : new Date(ts);
+  const diff = (Date.now() - d.getTime()) / 1000;
+  if (diff < 60) return 'الان';
+  if (diff < 3600) return Math.floor(diff / 60) + ' دقیقه پیش';
+  const hh = String(d.getHours()).padStart(2,'0');
+  const mm = String(d.getMinutes()).padStart(2,'0');
+  return hh + ':' + mm;
+}
+
+/* ---------- state ---------- */
+let currentUser = null;
+let currentPartner = null;
+let unsubMsgs = null;
+let usersCache = [];
+
+/* ---------- form switch ---------- */
+window.switchForm = function(which) {
+  document.getElementById('loginForm').classList.toggle('hidden', which !== 'login');
+  document.getElementById('registerForm').classList.toggle('hidden', which !== 'register');
+  document.getElementById('loginErr').textContent = '';
+  document.getElementById('regErr').textContent = '';
+};
+
+/* ---------- register ---------- */
+window.doRegister = async function() {
+  const name = document.getElementById('regName').value.trim();
+  const pass = document.getElementById('regPass').value;
+  const pass2 = document.getElementById('regPass2').value;
+  const err = document.getElementById('regErr');
+  err.textContent = '';
+
+  if (!name || !pass) return err.textContent = 'همه فیلدها الزامی‌ست';
+  if (name.length < 3) return err.textContent = 'اسم حداقل ۳ حرف';
+  if (name.length > 20) return err.textContent = 'اسم حداکثر ۲۰ حرف';
+  if (!/^[A-Za-z0-9_\u0600-\u06FF]+$/.test(name)) return err.textContent = 'فقط حرف، عدد و _';
+  if (pass.length < 4) return err.textContent = 'پسورد حداقل ۴ کاراکتر';
+  if (pass !== pass2) return err.textContent = 'پسوردها یکی نیستن';
+
+  setBusy('regBtn', true);
+  try {
+    const key = name.toLowerCase();
+    const ref = doc(db, 'users', key);
+    const snap = await getDoc(ref);
+    if (snap.exists()) { setBusy('regBtn', false); return err.textContent = 'این اسم قبلاً گرفته شده'; }
+
+    await setDoc(ref, {
+      username: name,
+      passHash: hashPass(pass),
+      createdAt: serverTimestamp()
+    });
+
+    localStorage.setItem('mmh_user', name);
+    localStorage.setItem('mmh_pass', pass); // برای auto-login
+    enterChat(name);
+  } catch (e) {
+    console.error(e);
+    setBusy('regBtn', false);
+    err.textContent = 'خطا: ' + e.message;
+  }
+};
+
+/* ---------- login ---------- */
+window.doLogin = async function() {
+  const name = document.getElementById('loginName').value.trim();
+  const pass = document.getElementById('loginPass').value;
+  const err = document.getElementById('loginErr');
+  err.textContent = '';
+
+  if (!name || !pass) return err.textContent = 'همه فیلدها الزامی‌ست';
+
+  setBusy('loginBtn', true);
+  try {
+    const ref = doc(db, 'users', name.toLowerCase());
+    const snap = await getDoc(ref);
+    if (!snap.exists()) { setBusy('loginBtn', false); return err.textContent = 'کاربر پیدا نشد'; }
+    if (snap.data().passHash !== hashPass(pass)) { setBusy('loginBtn', false); return err.textContent = 'پسورد اشتباهه'; }
+
+    localStorage.setItem('mmh_user', snap.data().username);
+    localStorage.setItem('mmh_pass', pass);
+    enterChat(snap.data().username);
+  } catch (e) {
+    console.error(e);
+    setBusy('loginBtn', false);
+    err.textContent = 'خطا: ' + e.message;
+  }
+};
+
+/* ---------- logout ---------- */
+window.doLogout = function() {
+  if (!confirm('از حساب خارج بشی؟')) return;
+  localStorage.removeItem('mmh_user');
+  localStorage.removeItem('mmh_pass');
+  location.reload();
+};
+
+/* ---------- enter chat ---------- */
+function enterChat(username) {
+  currentUser = username;
+  document.getElementById('myName').textContent = username;
+  document.getElementById('myAvatar').textContent = username[0].toUpperCase();
+  document.getElementById('authScreen').style.display = 'none';
+  document.getElementById('chatScreen').classList.add('active');
+  loadUsers();
+}
+
+/* ---------- load users ---------- */
+async function loadUsers() {
+  const listEl = document.getElementById('usersList');
+  try {
+    const snap = await getDocs(collection(db, 'users'));
+    usersCache = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if (data.username !== currentUser) usersCache.push(data);
+    });
+    usersCache.sort((a,b) => a.username.localeCompare(b.username));
+
+    if (!usersCache.length) {
+      listEl.innerHTML = '<div class="empty-chat" style="padding:40px 20px;"><div class="txt">هنوز کاربر دیگه‌ای نیست</div></div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    usersCache.forEach(u => {
+      const div = document.createElement('div');
+      div.className = 'user-item';
+      div.dataset.user = u.username;
+      div.innerHTML = `
+        <div class="avatar">${u.username[0].toUpperCase()}</div>
+        <div class="info"><div class="uname">${escapeHtml(u.username)}</div></div>
+      `;
+      div.onclick = () => openChat(u.username);
+      listEl.appendChild(div);
+    });
+  } catch (e) {
+    console.error(e);
+    listEl.innerHTML = '<div class="empty-chat" style="padding:40px 20px;"><div class="txt">خطا در بارگذاری</div></div>';
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- chat id ---------- */
+function chatId(a, b) {
+  return [a.toLowerCase(), b.toLowerCase()].sort().join('__');
+}
+
+/* ---------- open chat ---------- */
+function openChat(partner) {
+  if (currentPartner === partner) {
+    document.getElementById('chatLayout').classList.add('show-chat');
+    return;
+  }
+  currentPartner = partner;
+
+  // highlight
+  document.querySelectorAll('.user-item').forEach(el => {
+    el.classList.toggle('active', el.dataset.user === partner);
+  });
+
+  const main = document.getElementById('chatMain');
+  main.innerHTML = `
+    <div class="chat-main-head">
+      <button class="mobile-back" onclick="closeChatMobile()">‹</button>
+      <div class="avatar">${partner[0].toUpperCase()}</div>
+      <div>
+        <div class="title">${escapeHtml(partner)}</div>
+        <div class="status">● آنلاین</div>
+      </div>
+    </div>
+    <div class="messages-list" id="messagesList"></div>
+    <div class="input-bar">
+      <input id="msgInput" placeholder="پیامت رو بنویس..." autocomplete="off"
+             onkeydown="if(event.key==='Enter' && !event.shiftKey){event.preventDefault();sendMsg();}">
+      <button class="send-btn" onclick="sendMsg()">➤</button>
+    </div>
+  `;
+
+  document.getElementById('chatLayout').classList.add('show-chat');
+
+  if (unsubMsgs) { unsubMsgs(); unsubMsgs = null; }
+
+  const cid = chatId(currentUser, partner);
+  const q = query(collection(db, 'chats', cid, 'messages'), orderBy('createdAt'));
+  unsubMsgs = onSnapshot(q, snap => {
+    const list = document.getElementById('messagesList');
+    if (!list) return;
+    list.innerHTML = '';
+    snap.forEach(d => {
+      const m = d.data();
+      const isMine = m.sender === currentUser;
+      const row = document.createElement('div');
+      row.className = 'msg-row ' + (isMine ? 'sent' : 'received');
+      row.innerHTML = `
+        <div class="bubble">${escapeHtml(m.text)}</div>
+        <div class="msg-time">${timeAgo(m.createdAt)}</div>
+      `;
+      list.appendChild(row);
+    });
+    requestAnimationFrame(() => { list.scrollTop = list.scrollHeight; });
+  }, err => {
+    console.error(err);
+    toast('خطا در دریافت پیام‌ها');
+  });
+
+  setTimeout(() => document.getElementById('msgInput')?.focus(), 100);
+}
+
+window.closeChatMobile = function() {
+  document.getElementById('chatLayout').classList.remove('show-chat');
+};
+
+/* ---------- send message ---------- */
+window.sendMsg = async function() {
+  const input = document.getElementById('msgInput');
+  if (!input) return;
+  const text = input.value.trim();
+  if (!text || !currentPartner) return;
+  input.value = '';
+  input.focus();
+
+  const cid = chatId(currentUser, currentPartner);
+  try {
+    await addDoc(collection(db, 'chats', cid, 'messages'), {
+      sender: currentUser,
+      text: text,
+      createdAt: serverTimestamp()
+    });
+  } catch (e) {
+    console.error(e);
+    toast('ارسال نشد، دوباره تلاش کن');
+    input.value = text;
+  }
+};
+
+/* ---------- auto login ---------- */
+(async function autoLogin() {
+  const u = localStorage.getItem('mmh_user');
+  const p = localStorage.getItem('mmh_pass');
+  if (!u || !p) return;
+  try {
+    const snap = await getDoc(doc(db, 'users', u.toLowerCase()));
+    if (snap.exists() && snap.data().passHash === hashPass(p)) {
+      enterChat(snap.data().username);
+    } else {
+      localStorage.removeItem('mmh_user');
+      localStorage.removeItem('mmh_pass');
+    }
+  } catch(e) { /* ignore */ }
+})();
+
+/* ---------- enter key on auth ---------- */
+document.getElementById('loginPass').addEventListener('keydown', e => { if (e.key === 'Enter') doLogin(); });
+document.getElementById('regPass2').addEventListener('keydown', e => { if (e.key === 'Enter') doRegister(); });
+</script>
+
+</body>
+</html>
